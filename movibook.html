@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie & Book Display App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a2e;  /* Darker background for better contrast */
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100vh;
+    overflow-x: hidden;
+}
+
+#app {
+    width: 100%;
+    max-width: 400px;
+    margin-top: 20px;
+    padding: 10px;
+}
+
+#top-movie {
+    width: 100%;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#top-movie-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#top-movie-poster {
+    width: 100%;
+    max-width: 280px;  /* Shrink the top poster */
+    height: 250px;
+    object-fit: cover;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    margin-bottom: 10px;
+}
+
+#top-movie-title {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#top-movie-description {
+    font-size: 16px;
+    color: #ddd;
+}
+
+#search-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#search-input {
+    width: 75%;
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    background-color: #222;
+    color: #fff;
+}
+
+#search-button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    background-color: #f8c100;
+    color: #111;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#search-button:hover {
+    background-color: #ffb600;
+}
+
+#movie-list {
+    overflow-y: auto;
+    height: 60vh;
+    padding-bottom: 20px;
+}
+
+.movie-item {
+    display: inline-block;
+    width: 45%;  /* Shrink the movie posters to fit two per row */
+    margin: 10px 2.5%;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.movie-item img {
+    width: 100%;
+    height: 150px;  /* Smaller posters for better visibility */
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.movie-item h4 {
+    text-align: center;
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+.movie-item:hover {
+    transform: scale(1.05);
+}
+
+@media (max-width: 480px) {
+    #top-movie-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .movie-item {
+        width: 100%; /* Full width on small screens */
+    }
+}
+  
+</style>
+<body>
+    <div id="app">
+        <!-- Top Movie Section -->
+        <div id="top-movie">
+            <h2>Top Trending Movie /book<br>RIGO INDUCTION</h2>
+            <div id="top-movie-container">
+                <img id="top-movie-poster" src="" alt="Top Movie Poster">
+                <div id="top-movie-details">
+                    <h3 id="top-movie-title"></h3>
+                    <p id="top-movie-description"></p>
+                    <button id="play-trailer">Watch Trailer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Section -->
+        <div id="search-section">
+            <input type="text" id="search-input" placeholder="Search for a movie, book or genre..." />
+            <button id="search-button">Search</button>
+        </div>
+
+        <!-- Movie List Section -->
+        <div id="movie-list">
+            <div id="movie-items"></div>
+        </div>
+        </div>
+    
+    <script>
+      const apiKey = '245f8617';  // OMDb API Key
+let currentPage = 1;  // Pagination for loading more movies
+const moviesPerPage = 10; // Number of movies to load per scroll
+
+// Load a trending movie on page load
+document.addEventListener('DOMContentLoaded', function () {
+    // Initial auto load of trending movie
+    fetchTopMovie();
+    loadMovies(); // Load the first batch of movies
+
+    // Infinite scroll functionality
+    window.addEventListener('scroll', () => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+            loadMovies();
+        }
+    });
+});
+
+// Fetch top movie (example: trending)
+function fetchTopMovie() {
+    const url = `http://www.omdbapi.com/?t=Inception&apikey=${apiKey}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.Response === "True") {
+                displayTopMovie(data);
+            } else {
+                console.error("Error fetching top movie.");
+            }
+        })
+        .catch(error => console.error('Error fetching top movie:', error));
+}
+
+function displayTopMovie(movie) {
+    document.getElementById('top-movie-poster').src = movie.Poster;
+    document.getElementById('top-movie-title').textContent = movie.Title;
+    document.getElementById('top-movie-description').textContent = `Year: ${movie.Year} | Rating: ${movie.imdbRating} | Genre: ${movie.Genre}`;
+    document.getElementById('play-trailer').onclick = () => playTrailer(movie);
+}
+
+// Search functionality
+document.getElementById('search-button').addEventListener('click', function () {
+    const query = document.getElementById('search-input').value.trim();
+    if (query) {
+        searchMovies(query);
+    }
+});
+
+// Search movies by genre or name
+function searchMovies(query) {
+    const url = `http://www.omdbapi.com/?s=${query}&apikey=${apiKey}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.Response === "True") {
+                displaySearchResults(data.Search);
+            } else {
+                alert('No movies found!');
+            }
+        })
+        .catch(error => console.error('Error searching movies:', error));
+}
+
+// Display movie search results
+function displaySearchResults(movies) {
+    const movieItemsContainer = document.getElementById('movie-items');
+    movieItemsContainer.innerHTML = ''; // Clear existing results
+
+    movies.forEach(movie => {
+        const movieItem = document.createElement('div');
+        movieItem.classList.add('movie-item');
+        movieItem.innerHTML = `
+            <img src="${movie.Poster}" alt="${movie.Title}">
+            <h4>${movie.Title}</h4>
+            <p>Year: ${movie.Year}</p>
+        `;
+        movieItem.addEventListener('click', () => showMovieDetails(movie));
+        movieItemsContainer.appendChild(movieItem);
+    });
+}
+
+// Show detailed movie info when a movie is clicked
+function showMovieDetails(movie) {
+    const url = `http://www.omdbapi.com/?i=${movie.imdbID}&apikey=${apiKey}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.Response === "True") {
+                displayFullMovieDetails(data);
+            }
+        })
+        .catch(error => console.error('Error fetching movie details:', error));
+}
+
+// Display full movie details
+function displayFullMovieDetails(movie) {
+    const movieDetails = `
+        <div id="full-movie-details">
+            <img src="${movie.Poster}" alt="${movie.Title}" style="width: 100%; max-width: 400px;">
+            <h2>${movie.Title}</h2>
+            <p><strong>Year:</strong> ${movie.Year}</p>
+            <p><strong>Rating:</strong> ${movie.imdbRating}</p>
+            <p><strong>Genre:</strong> ${movie.Genre}</p>
+            <p><strong>Plot:</strong> ${movie.Plot}</p>
+            <button onclick="playTrailer('${movie.Trailer}')">Watch Trailer</button>
+        </div>
+    `;
+    document.body.innerHTML = movieDetails;  // Replace the body with the full details (or you can use a modal for better UX)
+}
+
+// Load more movies when user scrolls down
+function loadMovies() {
+    const url = `http://www.omdbapi.com/?s=action&page=${currentPage}&apikey=${apiKey}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.Response === "True") {
+                displayMoreMovies(data.Search);
+                currentPage++;
+            }
+        })
+        .catch(error => console.error('Error loading more movies:', error));
+}
+
+function displayMoreMovies(movies) {
+    const movieItemsContainer = document.getElementById('movie-items');
+    movies.forEach(movie => {
+        const movieItem = document.createElement('div');
+        movieItem.classList.add('movie-item');
+        movieItem.innerHTML = `
+            <img src="${movie.Poster}" alt="${movie.Title}">
+            <h4>${movie.Title}</h4>
+            <p>Year: ${movie.Year}</p>
+        `;
+        movieItem.addEventListener('click', () => showMovieDetails(movie));
+        movieItemsContainer.appendChild(movieItem);
+    });
+}
+
+// Function to play the movie trailer
+function playTrailer(movie) {
+    const trailerUrl = movie.Trailer ? movie.Trailer : "No trailer available";
+    alert(`Playing trailer from: ${trailerUrl}`);
+}
+
+// Add Book Search Functionality (Example: Using Google Books API)
+document.getElementById('search-button').addEventListener('click', function () {
+    const query = document.getElementById('search-input').value.trim();
+    if (query) {
+        searchBooks(query);
+    }
+});
+
+// Search books by title or author
+function searchBooks(query) {
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${query}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.totalItems > 0) {
+                displayBookResults(data.items);
+            } else {
+                alert('No books found!');
+            }
+        })
+        .catch(error => console.error('Error searching books:', error));
+}
+
+// Display book search results
+function displayBookResults(books) {
+    const movieItemsContainer = document.getElementById('movie-items');
+    movieItemsContainer.innerHTML = ''; // Clear existing results
+
+    books.forEach(book => {
+        const bookItem = document.createElement('div');
+        bookItem.classList.add('movie-item');
+        bookItem.innerHTML = `
+            <img src="${book.volumeInfo.imageLinks ? book.volumeInfo.imageLinks.thumbnail : 'no-image.png'}" alt="${book.volumeInfo.title}">
+            <h4>${book.volumeInfo.title}</h4>
+            <p>Author: ${book.volumeInfo.authors ? book.volumeInfo.authors.join(", ") : 'Unknown'}</p>
+        `;
+        bookItem.addEventListener('click', () => showBookDetails(book));
+        movieItemsContainer.appendChild(bookItem);
+    });
+}
+
+// Show detailed book info when a book is clicked
+function showBookDetails(book) {
+    const bookDetails = `
+        <div id="full-book-details">
+            <img src="${book.volumeInfo.imageLinks ? book.volumeInfo.imageLinks.thumbnail : 'no-image.png'}" alt="${book.volumeInfo.title}">
+            <h2>${book.volumeInfo.title}</h2>
+            <p><strong>Authors:</strong> ${book.volumeInfo.authors ? book.volumeInfo.authors.join(", ") : 'Unknown'}</p>
+            <p><strong>Publisher:</strong> ${book.volumeInfo.publisher}</p>
+            <p><strong>Published:</strong> ${book.volumeInfo.publishedDate}</p>
+            <p><strong>Description:</strong> ${book.volumeInfo.description}</p>
+            <a href="${book.volumeInfo.infoLink}" target="_blank">View on Google Books</a>
+        </div>
+    `;
+    document.body.innerHTML = bookDetails;  // Replace the body with the full details (or you can use a modal for better UX)
+}
+function playTrailer(imdbID) {
+    const url = `http://www.omdbapi.com/?i=${imdbID}&apikey=245f8617`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.Response === "True" && data.Trailer) {
+                const trailerUrl = `https://www.youtube.com/watch?v=${data.Trailer}`;
+                window.open(trailerUrl, '_blank');
+            } else {
+                alert("Trailer not available");
+            }
+        })
+        .catch(error => console.error('Error fetching trailer:', error));
+}
+    </script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Tic Tac Toe</title>
+</head>
+<style>
+  /* General Styles */
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(to bottom, #6a11cb, #2575fc);
+  color: #fff;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.container {
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 1s ease-out;
+}
+
+.hidden {
+  display: none;
+}
+
+.security-box, .game-box {
+  animation: slideIn 0.7s ease-out;
+}
+
+/* Input and Buttons */
+input {
+  width: 90%;
+  padding: 10px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+input:focus {
+  box-shadow: 0 0 10px #6a11cb;
+  outline: none;
+}
+
+button {
+  width: 50%;
+  padding: 10px 15px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  background: #6a11cb;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.3s;
+}
+
+button:hover {
+  background: #2575fc;
+  transform: scale(1.1);
+}
+
+button:active {
+  transform: scale(1.05);
+}
+
+/* Tic Tac Toe Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 20px 0;
+  animation: fadeIn 1s ease-in-out;
+}
+
+.cell {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+  color: #6a11cb;
+  font-size: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s, background 0.3s;
+}
+
+.cell:hover {
+  transform: scale(1.1);
+  background: #2575fc;
+  color: #fff;
+}
+
+.cell.disabled {
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+</style>
+<body>
+  <!-- Security Screen -->
+  <div class="container" id="security-screen">
+    <div class="security-box">
+      <h1 class="animate-title">🔒 Enter PIN</h1>
+      <input type="password" id="pin-input" maxlength="5" placeholder="Enter 5-digit PIN" class="animate-input" />
+      <button onclick="checkPIN()" class="animate-button">Submit</button>
+      <p id="pin-message" class="animate-message"></p>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div class="container hidden" id="game-screen">
+    <div class="game-box">
+      <h1 class="animate-title">🎮 Tic Tac Toe</h1>
+      <p id="game-message" class="animate-message"></p>
+      <div class="grid" id="grid">
+        <!-- Cells dynamically generated -->
+      </div>
+      <button onclick="resetGame()" class="animate-button">Reset Game</button>
+    </div>
+  </div>
+
+  <!-- Alert Sound -->
+  <audio id="alert-sound" src="/mixkit-police-siren-us-1643 (1).wav" preload="auto"></audio>
+
+  <script>
+// Security System
+const correctPIN = "Dk420";
+let attempts = 3;
+let isBlocked = false;
+
+function checkPIN() {
+  if (isBlocked) return; // Block further attempts if the system is locked
+
+  const pinInput = document.getElementById("pin-input").value;
+  const pinMessage = document.getElementById("pin-message");
+
+  if (pinInput === correctPIN) {
+    document.getElementById("security-screen").classList.add("hidden");
+    document.getElementById("game-screen").classList.remove("hidden");
+    createGrid();
+  } else {
+    attempts -= 1;
+    if (attempts > 0) {
+      pinMessage.innerText = `Incorrect PIN. Attempts remaining: ${attempts}`;
+      pinMessage.style.color = "red";
+    } else {
+      pinMessage.innerText = "Device locked. No further attempts allowed.";
+      pinMessage.style.color = "red";
+      document.querySelector("button").disabled = true;
+      blockSystem();
+    }
+  }
+}
+
+// Block system and play alert sound continuously
+function blockSystem() {
+  isBlocked = true;
+  const alertSound = document.getElementById("alert-sound");
+  alertSound.loop = true; // Set loop to true to play sound continuously
+  alertSound.play(); // Play the alert sound continuously
+
+  setTimeout(() => {
+    alert("System Blocked! Please contact administrator.");
+  }, 100); // Alert message after sound starts playing
+}
+
+// Tic Tac Toe Game
+let board = ["", "", "", "", "", "", "", "", ""];
+let currentPlayer = "X";
+
+function createGrid() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = ""; // Clear the grid
+  board.forEach((cell, index) => {
+    const cellElement = document.createElement("div");
+    cellElement.classList.add("cell");
+    cellElement.innerText = cell;
+    cellElement.onclick = () => handlePlayerMove(index);
+    if (cell !== "") {
+      cellElement.classList.add("disabled");
+    }
+    grid.appendChild(cellElement);
+  });
+}
+
+function handlePlayerMove(index) {
+  if (board[index] === "") {
+    board[index] = currentPlayer;
+    currentPlayer = currentPlayer === "X" ? "O" : "X";
+    createGrid();
+    checkGameStatus();
+    if (currentPlayer === "O") {
+      setTimeout(aiMove, 500); // AI moves after a delay
+    }
+  }
+}
+
+function aiMove() {
+  const emptyCells = board.map((cell, index) => (cell === "" ? index : null)).filter(index => index !== null);
+  const randomMove = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+  if (randomMove !== undefined) {
+    board[randomMove] = "O";
+    currentPlayer = "X";
+    createGrid();
+    checkGameStatus();
+  }
+}
+
+function checkGameStatus() {
+  const winConditions = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+    [0, 4, 8], [2, 4, 6],            // Diagonals
+  ];
+  for (const condition of winConditions) {
+    const [a, b, c] = condition;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      document.getElementById("game-message").innerText = `${board[a]} wins!`;
+      setTimeout(resetGame, 1000);
+      return;
+    }
+  }
+  if (!board.includes("")) {
+    document.getElementById("game-message").innerText = "It's a draw!";
+    setTimeout(resetGame, 1000);
+  }
+}
+
+function resetGame() {
+  board = ["", "", "", "", "", "", "", "", ""];
+  currentPlayer = "X";
+  document.getElementById("game-message").innerText = "Player";
+  createGrid();
+}
+  </script>
+</body>
+</html>
